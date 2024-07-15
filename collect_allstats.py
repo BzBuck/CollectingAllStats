@@ -51,11 +51,11 @@ def get_pbp(season, stat="get-totals"):
     player_stats
     df = pd.json_normalize(player_stats)
     df.fillna(0, inplace=True)
-    return df
+    return df.rename(columns={'EntityId': 'PlayerId'})
+
 
 pbp = get_pbp(season)
-
-pbp = pbp.rename(columns={'EntityId': 'PlayerId'})
+#pbp = 
 
 
 
@@ -63,6 +63,8 @@ pbp = pbp.rename(columns={'EntityId': 'PlayerId'})
 # URL Features
 stat_endpoint = "playerindex" #leaguehustlestatsplayer
 url = f"https://stats.nba.com/stats/" 
+
+# Set params to desired 
 myparams = {
     "College":"",
     "Conference":"",
@@ -97,11 +99,15 @@ myparams = {
     "Weight":""
 
 }
+myparams["PerMode"] = "PerGame" # "PerGame" "Totals" 
+myparams["SeasonType"] = "Regular Season" #"Playoffs" "Regular%20Season"
 
 
 def params_to_url(base_url,endpoint, params):
     url = f"{base_url}{endpoint}?"
-    for param in params:
+
+    # Loop through and add all params to the url
+    for param in params: 
         url += f"{param}={params[param]}&"
     
     return url[:-1]
@@ -110,8 +116,7 @@ def request_data(url,headers=STATS_HEADERS):
     response = requests.get(url, headers=headers)
     data = response.json()
     my_players_df = pd.DataFrame(data['resultSets'][0]['rowSet'], columns=data['resultSets'][0]['headers'])
-
-    return my_players_df
+    return my_players_df.rename(columns={'PERSON_ID': 'PlayerId'})
 
 
 def mergedfs(df1, df2):
@@ -124,18 +129,32 @@ def mergedfs(df1, df2):
 
     return merged_df
 
-
-# Set params to desired 
+# Set new param and add it to the full merged dataframe
 myparams["PtMeasureType"] = "Possessions"
-myparams["PerMode"] = "PerGame" # "PerGame" "Totals" 
-myparams["SeasonType"] = "Regular Season" #"Playoffs" "Regular%20Season"
-
 req_url = params_to_url(url,stat_endpoint,myparams)
-
-
 reqdatar = request_data(req_url)
-reqdatar = reqdatar.rename(columns={'PERSON_ID': 'PlayerId'})
-
-
 mrgd = mergedfs(pbp,reqdatar)
+
+# I am using sloppy run ons for concision but this operates the same as above
+myparams["PtMeasureType"] = "Passing"
+mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
+myparams["PtMeasureType"] = "defensive-impact"
+mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
+myparams["PtMeasureType"] = "speed-distance"
+mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
+myparams["PtMeasureType"] = "rebounding"
+mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
+myparams["PtMeasureType"] = "offensive-rebounding"
+mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
+myparams["PtMeasureType"] = "defensive-rebounding"
+mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
+# stat_endpoint = "leaguehustlestatsplayer"
+# mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
 mrgd.to_csv("allscraped.csv")
