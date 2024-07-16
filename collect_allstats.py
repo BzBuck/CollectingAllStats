@@ -61,7 +61,7 @@ pbp = get_pbp(season)
 
 
 # URL Features
-stat_endpoint = "playerindex" #leaguehustlestatsplayer
+stat_endpoint = "leaguedashptstats" #leaguehustlestatsplayer
 url = f"https://stats.nba.com/stats/" 
 
 # Set params to desired 
@@ -100,7 +100,7 @@ myparams = {
 
 }
 myparams["PerMode"] = "PerGame" # "PerGame" "Totals" 
-myparams["SeasonType"] = "Regular Season" #"Playoffs" "Regular%20Season"
+myparams["SeasonType"] = "Regular Season" # "Playoffs" "Regular%20Season"
 
 
 def params_to_url(base_url,endpoint, params):
@@ -116,7 +116,7 @@ def request_data(url,headers=STATS_HEADERS):
     response = requests.get(url, headers=headers)
     data = response.json()
     my_players_df = pd.DataFrame(data['resultSets'][0]['rowSet'], columns=data['resultSets'][0]['headers'])
-    return my_players_df.rename(columns={'PERSON_ID': 'PlayerId'})
+    return my_players_df.rename(columns={'PLAYER_ID': 'PlayerId'})
 
 
 def mergedfs(df1, df2):
@@ -139,22 +139,16 @@ mrgd = mergedfs(pbp,reqdatar)
 myparams["PtMeasureType"] = "Passing"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
-myparams["PtMeasureType"] = "defensive-impact"
+myparams["PtMeasureType"] = "Defense"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
-myparams["PtMeasureType"] = "speed-distance"
+myparams["PtMeasureType"] = "SpeedDistance"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
-myparams["PtMeasureType"] = "rebounding"
+myparams["PtMeasureType"] = "Rebounding"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
-myparams["PtMeasureType"] = "offensive-rebounding"
+stat_endpoint = "leaguehustlestatsplayer"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
-
-myparams["PtMeasureType"] = "defensive-rebounding"
-mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
-
-# stat_endpoint = "leaguehustlestatsplayer"
-# mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
 mrgd.to_csv("allscraped.csv")
