@@ -24,18 +24,6 @@ except ImportError:
     }
 
 
-# Convert Totals to other forms
-def to_per_100pos(df,stat):
-    df[f"{stat}_Per100Pos"] = df[stat]/df["TotalPoss"]*100 # PARTIAL_POSS
-    return df
-
-def to_per_game(df,stat):
-    df[f"{stat}_PerGame"] = df[stat]/df["GamesPlayed"]
-    return df
-
-def to_per_36_min(df,stat):
-    df[f"{stat}_Per36Min"] = df[stat]/df["Minutes"]*36 
-    return df
 
 # Scrape pbpstats
 def get_pbp(season, stat="get-totals"):
