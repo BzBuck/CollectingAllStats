@@ -38,31 +38,37 @@ filtered_df = req_filter(read_df,"Minutes",1000)
 filtered_df.to_csv("filtered.csv")
 
 my_stats = pd.DataFrame()
-my_stats = filtered_df[["Name","TeamAbbreviation","GamesPlayed","Minutes","POINTS","AST","REB","AST_POINTS_CREATED","AST_ADJ","POTENTIAL_AST","PASSES_MADE","SECONDARY_AST","FT_AST"]]
+my_stats = filtered_df[["Name","TeamAbbreviation","GamesPlayed","Minutes","TsPct","POINTS","AST","REB","AST_POINTS_CREATED","AST_ADJ","POTENTIAL_AST","PASSES_MADE","SECONDARY_AST","FT_AST"]]
 
+# Assist stats
 my_stats["PointsPerAssist"] = my_stats["AST_POINTS_CREATED"] / my_stats["AST"]
 my_stats["AdjustedAssistPtsCreated"] = my_stats["PointsPerAssist"] * my_stats["AST_ADJ"]
 my_stats["PotentialAssistPtsCreated"] = my_stats["PointsPerAssist"] * my_stats["POTENTIAL_AST"]
 my_stats["MissedAssists"] = my_stats["POTENTIAL_AST"] - my_stats["AST"]
 my_stats["MissedAssistsPerAssist"] = my_stats["MissedAssists"] / my_stats["AST"]
 my_stats["PotentialAssistsPerPass"] = my_stats["POTENTIAL_AST"] / my_stats["PASSES_MADE"]
-my_stats["AdjustedPotentialAssistPtsCreated"] = my_stats["PointsPerAssist"] * (my_stats["POTENTIAL_AST"] + my_stats["SECONDARY_AST"] + my_stats["FT_AST"])
 my_stats["FTAssistsPerAssist"] = my_stats["FT_AST"] / my_stats["AST"]
 my_stats["2ndAssistsPerAssist"] = my_stats["SECONDARY_AST"] / my_stats["AST"]
+my_stats["AssistTsPct"] = my_stats["AST_POINTS_CREATED"] /  my_stats["PotentialAssistPtsCreated"]
+my_stats["AdjustedAssistTsPct"] = my_stats["AdjustedAssistPtsCreated"] /  my_stats["PotentialAssistPtsCreated"]
 
-
-
-my_stats = filtered_df[common]
 
 # True Stocks
 my_stats["TrueStock"] = filtered_df["RecoveredBlocks"] + filtered_df["Steals"] + filtered_df["Offensive Fouls Drawn"]  + filtered_df["Charge Fouls Drawn"]
 my_stats = to_per_game(my_stats,"TrueStock")
 
 
-# Rebounding
-my_stats["OREB"] = filtered_df['OREB']
-my_stats["DREB"] = filtered_df['DREB']
-my_stats["C_OREB"] = filtered_df['C_OREB']
-my_stats["C_DREB"] = filtered_df['C_DREB']
+# # Rebounding
+# my_stats["OREB"] = filtered_df['OREB']
+# my_stats["DREB"] = filtered_df['DREB']
+# my_stats["C_OREB"] = filtered_df['C_OREB']
+# my_stats["C_DREB"] = filtered_df['C_DREB']
 
-my_stats['C_OREB_PCT'] = my_st
+#my_stats['C_OREB_PCT'] = my_st
+
+my_stats["+-/m"] = filtered_df['PlusMinus'] / filtered_df['Minutes']
+my_stats["+-/48m"] = filtered_df['PlusMinus'] / filtered_df['Minutes'] * 48
+
+
+my_stats = my_stats.round(2)
+my_stats.to_csv("mystats.csv")

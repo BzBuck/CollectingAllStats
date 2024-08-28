@@ -26,25 +26,31 @@ except ImportError:
 
 
 # Scrape pbpstats
-def get_pbp(season, stat="get-totals"):
+# https://github.com/dblackrun/pbpstats-api-code-examples/blob/main/get-totals.ipynb
+def get_pbp(season, season_type, target, stat="get-totals", ):
     url = f"https://api.pbpstats.com/{stat}/nba"
     params = {
         "Season": season,
-        "SeasonType": "Regular Season",
-        "Type": "Player"
+        "SeasonType": season_type,
+        "Type": target
     }
     response = requests.get(url, params=params)
     response_json = response.json()
     player_stats = response_json["multi_row_table_data"]
-    player_stats
+    
     df = pd.json_normalize(player_stats)
     df.fillna(0, inplace=True)
     return df.rename(columns={'EntityId': 'PlayerId'})
 
 
-pbp = get_pbp(season)
-#pbp = 
+pbp = get_pbp(season,"Regular Season", "Player")
 
+pbpteam = get_pbp(season,"Regular Season", "Team")
+pbpteam.columns = ['Team' + col if not col.startswith('Team') else col for col in pbpteam.columns]
+
+pbpteam.to_csv("pbpteam.csv")
+
+pbp = pd.merge(pbp,pbpteam, on='TeamAbbreviation', how='left')
 
 
 
