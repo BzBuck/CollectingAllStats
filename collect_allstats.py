@@ -52,7 +52,7 @@ pbpteam.to_csv("pbpteam.csv")
 
 pbp = pd.merge(pbp,pbpteam, on='TeamAbbreviation', how='left')
 
-
+# https://api.pbpstats.com/get-totals/wnba?Season=2022&SeasonType=Regular%20Season&Type=Player&StarterState=All&StartType=All
 
 # URL Features
 stat_endpoint = "leaguedashptstats" #leaguehustlestatsplayer
@@ -118,12 +118,13 @@ def mergedfs(df1, df2):
     df1['PlayerId'] = df1['PlayerId'].astype('int64')
     df2['PlayerId'] = df2['PlayerId'].astype('int64')
 
-    # Merge the dataframes on 'PlayerId'
-    merged_df = pd.merge(df1, df2, on='PlayerId')
+    # Merge the dataframes on 'PlayerId' using poor suffix append since pandas suffix duplicates broke
+    merged_df = pd.merge(df1, df2, on='PlayerId',how="left",suffixes=df2.keys()[-2:])
 
     return merged_df
 
 # Set new param and add it to the full merged dataframe
+# Example req_url: https://stats.nba.com/stats/leaguedashptstats?PtMeasureType=Possessions&Season=2023-24
 myparams["PtMeasureType"] = "Possessions"
 req_url = params_to_url(url,stat_endpoint,myparams)
 reqdatar = request_data(req_url)
@@ -142,7 +143,30 @@ mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 myparams["PtMeasureType"] = "Rebounding"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
+
+myparams["PtMeasureType"] = ""
+myparams["DefenseCategory"] = "Overall"
+myparams["PlayerID"] = 0
+
+myparams["PlayerId"] = ""
+
+stat_endpoint = "leaguedashptdefend"
+mrgd = pd.merge(mrgd, request_data(params_to_url(url,stat_endpoint,myparams)), on='PLAYER_NAME')
+
 stat_endpoint = "leaguehustlestatsplayer"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
+
+# Estimated Advanced
+# For some reason this one url has different keys for only one resultSet and heeaders so I have to change it manually
+# Ideally I will eventually calculate these myself since this code is so clunky and inconvinient
+response = requests.get("https://stats.nba.com/stats/playerestimatedmetrics?LeagueID=00&Season=2019-20&SeasonType=Regular+Season",headers=STATS_HEADERS)
+data = response.json()
+headers = data['resultSet']['headers']
+rows = data['resultSet']['rowSet']
+players_est_df = pd.DataFrame(rows, columns=headers)
+players_est_df.set_index(headers[0], inplace=True)
+mrgd["PLAYER_NAME"] = mrgd["Name"]
+mrgd =  pd.merge(mrgd, players_est_df, on='PLAYER_NAME')
+
 
 mrgd.to_csv("allscraped.csv")
