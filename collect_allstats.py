@@ -27,7 +27,7 @@ except ImportError:
 
 # Scrape pbpstats
 # https://github.com/dblackrun/pbpstats-api-code-examples/blob/main/get-totals.ipynb
-def get_pbp(season, season_type, target, stat="get-totals", ):
+def get_pbp(season, season_type, target, stat="get-totals"):
     url = f"https://api.pbpstats.com/{stat}/nba"
     params = {
         "Season": season,
@@ -44,6 +44,8 @@ def get_pbp(season, season_type, target, stat="get-totals", ):
 
 
 pbp = get_pbp(season,"Regular Season", "Player")
+
+pbp.to_csv("pbptest.csv")
 
 pbpteam = get_pbp(season,"Regular Season", "Team")
 pbpteam.columns = ['Team' + col if not col.startswith('Team') else col for col in pbpteam.columns]
@@ -159,7 +161,7 @@ mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 # Estimated Advanced
 # For some reason this one url has different keys for only one resultSet and heeaders so I have to change it manually
 # Ideally I will eventually calculate these myself since this code is so clunky and inconvinient
-response = requests.get("https://stats.nba.com/stats/playerestimatedmetrics?LeagueID=00&Season=2019-20&SeasonType=Regular+Season",headers=STATS_HEADERS)
+response = requests.get(f"https://stats.nba.com/stats/playerestimatedmetrics?LeagueID=00&Season={season}&SeasonType=Regular+Season",headers=STATS_HEADERS)
 data = response.json()
 headers = data['resultSet']['headers']
 rows = data['resultSet']['rowSet']
