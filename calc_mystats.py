@@ -56,9 +56,12 @@ my_stats["TOV"] = my_stats["Turnovers"] / my_stats["GamesPlayed"]
 my_stats["FLS"]  = my_stats["Fouls"] / my_stats["GamesPlayed"]
 
 # Track Positions
+positions = ["PG", "SG", "SF", "PF", "C"]
+position_mapping = {pos: i+1 for i, pos in enumerate(positions)}
 my_stats['Positions'] = filtered_df['Pos'].apply(lambda x: x.split('-') if isinstance(x, str) else [])
-for pos in ["PG", "SG", "SF", "PF", "C"]:
+for pos in positions:
     my_stats[pos] = my_stats['Positions'].apply(lambda x: pos in x).astype(int)
+my_stats['Positions'] = my_stats['Positions'].apply(lambda x: [position_mapping[pos] for pos in x])
 
 # Scoring stats
 my_stats["TrueShotAttempts"] = my_stats["PTS"] / (2 * my_stats["TsPct"])
