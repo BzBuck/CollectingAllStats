@@ -114,6 +114,17 @@ def request_data(url,headers=STATS_HEADERS):
     my_players_df = pd.DataFrame(data['resultSets'][0]['rowSet'], columns=data['resultSets'][0]['headers'])
     return my_players_df.rename(columns={'PLAYER_ID': 'PlayerId'})
 
+# Basketball Reference
+def br_data(year,stype = "per_game", league = "leagues"):
+    league_url = f"https://www.basketball-reference.com/{league}/NBA_{year}_{stype}.html"
+    table = pd.read_html(league_url, header=0)[0]  # Ensure the header is correctly set
+
+    table["Player"] = table["Player"].str.replace('*', '', regex=False)
+    table = table.loc[:, ~table.columns.str.contains('^Unnamed')]
+
+    for col in table.columns[3:]:
+        table[col] = pd.to_numeric(table[col], errors='coerce')
+    return table
 
 def mergedfs(df1, df2):
     # Ensure 'PlayerId' is of type int64 in both dataframes
@@ -122,6 +133,14 @@ def mergedfs(df1, df2):
 
     # Merge the dataframes on 'PlayerId' using poor suffix append since pandas suffix duplicates broke
     merged_df = pd.merge(df1, df2, on='PlayerId',how="left",suffixes=df2.keys()[-2:])
+
+    return merged_df
+
+def gen_mergedfs(df1, df2,col1='PlayerId',col2='PlayerId'):
+    #df2.rename(columns={col2: col1})
+    df2[col1] = df2[col2]
+    # Merge the dataframes on 'PlayerId' using poor suffix append since pandas suffix duplicates broke
+    merged_df = pd.merge(df1, df2, on=col1,how="left",suffixes=df2.keys()[-2:])
 
     return merged_df
 
@@ -170,5 +189,6 @@ players_est_df.set_index(headers[0], inplace=True)
 mrgd["PLAYER_NAME"] = mrgd["Name"]
 mrgd =  pd.merge(mrgd, players_est_df, on='PLAYER_NAME')
 
+mrgd = gen_mergedfs(mrgd, br_data(year,stype = "advanced"), "Name","Player")
 
 mrgd.to_csv("allscraped.csv")
