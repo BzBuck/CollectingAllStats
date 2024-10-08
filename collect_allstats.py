@@ -1,6 +1,6 @@
 import pandas as pd
 import requests
-
+from unidecode import unidecode
 
 year = 2024
 season = f"{year - 1}-{year % 100:02}" 
@@ -40,6 +40,9 @@ def get_pbp(season, season_type, target, stat="get-totals"):
     
     df = pd.json_normalize(player_stats)
     df.fillna(0, inplace=True)
+    
+    #print(df[df['EntityId'] == 203999])
+    #if df["Name"] != None: df["Name"] = df["Name"].apply(unidecode) # Clean up accent marks
     return df.rename(columns={'EntityId': 'PlayerId'})
 
 
@@ -176,18 +179,6 @@ mrgd = pd.merge(mrgd, request_data(params_to_url(url,stat_endpoint,myparams)), o
 
 stat_endpoint = "leaguehustlestatsplayer"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
-
-# Estimated Advanced
-# For some reason this one url has different keys for only one resultSet and heeaders so I have to change it manually
-# Ideally I will eventually calculate these myself since this code is so clunky and inconvinient
-response = requests.get(f"https://stats.nba.com/stats/playerestimatedmetrics?LeagueID=00&Season={season}&SeasonType=Regular+Season",headers=STATS_HEADERS)
-data = response.json()
-headers = data['resultSet']['headers']
-rows = data['resultSet']['rowSet']
-players_est_df = pd.DataFrame(rows, columns=headers)
-players_est_df.set_index(headers[0], inplace=True)
-mrgd["PLAYER_NAME"] = mrgd["Name"]
-mrgd =  pd.merge(mrgd, players_est_df, on='PLAYER_NAME')
 
 mrgd = gen_mergedfs(mrgd, br_data(year,stype = "advanced"), "Name","Player")
 
