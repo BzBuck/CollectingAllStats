@@ -122,7 +122,7 @@ def br_data(year,stype = "per_game", league = "leagues"):
     league_url = f"https://www.basketball-reference.com/{league}/NBA_{year}_{stype}.html"
     table = pd.read_html(league_url, header=0)[0]  # Ensure the header is correctly set
 
-    table["Player"] = table["Player"].str.replace('*', '', regex=False)
+    table["Player"] = table["Player"].str.replace('*', '', regex=False).apply(unidecode)
     table = table.loc[:, ~table.columns.str.contains('^Unnamed')]
 
     for col in table.columns[3:]:
