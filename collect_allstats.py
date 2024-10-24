@@ -40,22 +40,12 @@ def get_pbp(season, season_type, target, stat="get-totals"):
     
     df = pd.json_normalize(player_stats)
     df.fillna(0, inplace=True)
-    
-    #print(df[df['EntityId'] == 203999])
-    #if df["Name"] != None: df["Name"] = df["Name"].apply(unidecode) # Clean up accent marks
+
     return df.rename(columns={'EntityId': 'PlayerId'})
 
 
 pbp = get_pbp(season,"Regular Season", "Player")
 
-pbp.to_csv("pbptest.csv")
-
-pbpteam = get_pbp(season,"Regular Season", "Team")
-pbpteam.columns = ['Team' + col if not col.startswith('Team') else col for col in pbpteam.columns]
-
-pbpteam.to_csv("pbpteam.csv")
-
-pbp = pd.merge(pbp,pbpteam, on='TeamAbbreviation', how='left')
 
 # https://api.pbpstats.com/get-totals/wnba?Season=2022&SeasonType=Regular%20Season&Type=Player&StarterState=All&StartType=All
 
@@ -122,7 +112,7 @@ def br_data(year,stype = "per_game", league = "leagues"):
     league_url = f"https://www.basketball-reference.com/{league}/NBA_{year}_{stype}.html"
     table = pd.read_html(league_url, header=0)[0]  # Ensure the header is correctly set
 
-    table["Player"] = table["Player"].str.replace('*', '', regex=False).apply(unidecode)
+    table["Player"] = table["Player"].str.replace('*', '', regex=False).apply(unidecode) # Remove accent marks and HOF stars
     table = table.loc[:, ~table.columns.str.contains('^Unnamed')]
 
     for col in table.columns[3:]:
@@ -181,5 +171,12 @@ stat_endpoint = "leaguehustlestatsplayer"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
 mrgd = gen_mergedfs(mrgd, br_data(year,stype = "advanced"), "Name","Player")
+
+pbpteam = get_pbp(season,"Regular Season", "Team")
+pbpteam.columns = ['Team' + col if not col.startswith('Team') else col for col in pbpteam.columns]
+
+pbpteam.to_csv("pbpteam.csv")
+
+pbp = pd.merge(pbp,pbpteam, on='TeamAbbreviation', how='left')
 
 mrgd.to_csv("allscraped.csv")
