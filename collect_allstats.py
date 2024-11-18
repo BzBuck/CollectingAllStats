@@ -78,7 +78,7 @@ myparams = {
     "PlayerOrTeam":"Player",
     "PlayerPosition":"",
     "PtMeasureType":"Possessions",
-    "Season":"2023-24",
+    "Season":f"{season}",
     "SeasonSegment":"",
     "SeasonType":"Playoffs",
     "StarterBench":"",
@@ -111,12 +111,59 @@ def request_data(url,headers=STATS_HEADERS):
 def br_data(year,stype = "per_game", league = "leagues"):
     league_url = f"https://www.basketball-reference.com/{league}/NBA_{year}_{stype}.html"
     table = pd.read_html(league_url, header=0)[0]  # Ensure the header is correctly set
-
     table["Player"] = table["Player"].str.replace('*', '', regex=False).apply(unidecode) # Remove accent marks and HOF stars
     table = table.loc[:, ~table.columns.str.contains('^Unnamed')]
 
     for col in table.columns[3:]:
         table[col] = pd.to_numeric(table[col], errors='coerce')
+    return table
+
+team_codes = [["League Average","TOT"],
+["Atlanta Hawks", "ATL"],
+["Boston Celtics", "BOS"],
+["Brooklyn Nets", "BKN"],
+["Charlotte Hornets", "CHA"],
+["Chicago Bulls", "CHI"],
+["Cleveland Cavaliers", "CLE"],
+["Detroit Pistons", "DET"],
+["Indiana Pacers", "IND"],
+["Miami Heat", "MIA"],
+["Milwaukee Bucks", "MIL"],
+["New York Knicks", "NYK"],
+["Orlando Magic", "ORL"],
+["Philadelphia 76ers", "PHI"],
+["Toronto Raptors", "TOR"],
+["Washington Wizards", "WAS"],
+["Dallas Mavericks", "DAL"],
+["Denver Nuggets", "DEN"],
+["Golden State Warriors", "GSW"],
+["Houston Rockets", "HOU"],
+["Los Angeles Clippers", "LAC"],
+["Los Angeles Lakers", "LAL"],
+["Memphis Grizzlies", "MEM"],
+["Minnesota Timberwolves", "MIN"],
+["New Orleans Pelicans", "NOP"],
+["Oklahoma City Thunder", "OKC"],
+["Phoenix Suns", "PHX"],
+["Portland Trail Blazers", "POR"],
+["Sacramento Kings", "SAC"],
+["San Antonio Spurs", "SAS"],
+["Utah Jazz", "UTA"],
+["Charlotte Bobcats", "CHA"],
+["New Jersey Nets", "NJN"],
+["New Orleans Hornets", "NOH"]]
+team_dict = {team[0]: team[1] for team in team_codes}
+
+
+def br_team_data(year):
+    league_url = f"https://www.basketball-reference.com/leagues/NBA_{year}_ratings.html"
+    table = pd.read_html(league_url, header=[0, 1])[0]  
+    table.columns = table.columns.droplevel(0)  
+
+    table = table.add_prefix('Team_')
+    table = table.rename(columns={'Team_Team': 'Team_Fullname'})
+    table["TeamAbbreviation"] = table['Team_Fullname'].map(team_dict)
+    
     return table
 
 def mergedfs(df1, df2):
@@ -164,19 +211,29 @@ myparams["PlayerID"] = 0
 
 myparams["PlayerId"] = ""
 
-stat_endpoint = "leaguedashptdefend"
+stat_endpoint = "leaguedashptdefend" # Bug: Only Dates Back to 2014, otherwise error
 mrgd = pd.merge(mrgd, request_data(params_to_url(url,stat_endpoint,myparams)), on='PLAYER_NAME')
 
 stat_endpoint = "leaguehustlestatsplayer"
 mrgd = mergedfs(mrgd,request_data(params_to_url(url,stat_endpoint,myparams)))
 
 mrgd = gen_mergedfs(mrgd, br_data(year,stype = "advanced"), "Name","Player")
+# mrgd = gen_mergedfs(mrgd, br_data(year,stype = "per_poss"), "Name","Player")
+#mrgd = gen_mergedfs(mrgd, br_data(year,stype = "play-by-play"), "Name","Player")
 
 pbpteam = get_pbp(season,"Regular Season", "Team")
 pbpteam.columns = ['Team' + col if not col.startswith('Team') else col for col in pbpteam.columns]
 
-pbpteam.to_csv("pbpteam.csv")
+brteam = br_team_data(year)
+allteam = pd.merge(pbpteam,brteam, on='TeamAbbreviation', how='left')
 
-pbp = pd.merge(pbp,pbpteam, on='TeamAbbreviation', how='left')
+from collect_teamstats import merge_all_tables
+teambr = merge_all_tables(year)
+allteam = pd.merge(allteam,teambr, on='TeamAbbreviation', how='left')
+
+allteam.to_csv("pbpteam.csv")
+
+mrgd = pd.merge(mrgd,allteam, on='TeamAbbreviation', how='left')
+mrgd = mrgd.drop_duplicates(subset=['PlayerId', 'Name'])
 
 mrgd.to_csv("allscraped.csv")
